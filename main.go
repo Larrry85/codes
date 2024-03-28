@@ -66,7 +66,7 @@ func main() {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 func displayUsage() { // instructions for using the program
-	fmt.Println("itinerary usage:")
+	fmt.Println("Itinerary usage:")
 	fmt.Println("go run . ./input.txt ./output.txt ./airports_lookup.csv [flags]")
 	fmt.Println("Flags:")
 	fmt.Println("-color: Enable color in output")
@@ -286,10 +286,3 @@ func bonus() {
 	return
 } //bonus() END
 /////////////////////////////////////////////////////////////////////////////////////////
-
-/* README
-
-To run this Go code, save it in a file named itinerary_prettifier.go and execute it using:
-
-go run . ./input.txt ./output.txt ./airport-lookup.csv [flags]
-*/
