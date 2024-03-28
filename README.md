@@ -16,9 +16,9 @@ This is my first task: itinerary.
 10. IATA, ICAO to airport names  
 11. ISO to user friendly  
 12. no whitespace, max two newlines  
-13. Bonus: alkuvalikkoon näille vaihtoehto:  
-14. IATA, ICAO to city names -feature  
-15. different order in columns -feature  
+13. \v \f \r into: \n
+14. Bonus: alkuvalikkoon näille vaihtoehto:  
+15. IATA, ICAO to city names -feature  
 16. different order in columns -feature  
 17. formatting, highlight, bold, underline, italic, colors etc -feature  
 18. kaikille funktio tai muu, jolla ne menee päälle  
