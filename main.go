@@ -1,209 +1,199 @@
 package main
 
 import (
-	//"bufio"
-	"encoding/csv"
-	"errors"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"regexp"
-	"strings"
-	"time"
+	"bufio"        // scanning csv: scanner := bufio.NewScanner(file)
+	"encoding/csv" // reading, writing csv: reader := csv.NewReader(file)
+	"errors"       // error handling
+	"fmt"          // printing
+	"io"           // csv
+	"os"           // interface, arguments, file operations
+	"regexp"       // regex patterns
+	"strings"      // string manipulation, contentStr := strings.Join(content, "\n")
+	"time"         // measuring and displaying time
 )
 
 ////////////
-// variables
+// Variables
 ////////////
 
-type AirportLookup map[string]string
+type AirportLookup map[string]string // key : value pairs
 
-// Define flags for bonus features
-var (
-	colorOutput    bool
-	reverseColumns bool
-	airportNames   bool
-)
+var line string // each line read from input
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////
-// functions
+// Functions
 ////////////
 
 func main() {
-
-	// if too few, over or five, or -h: usage
-	if len(os.Args) < 4 || len(os.Args) > 5 || (len(os.Args) == 5 && os.Args[4] == "-h") {
+	// if too few or too many arguments, print usage
+	if len(os.Args) < 4 || len(os.Args) > 5 {
 		displayUsage()
+		return // exits the program
+	}
+
+	// if ony "go run . -h"
+	if len(os.Args) > 1 && os.Args[1] == "-h" {
+		displayUsage()
+		//fmt.Println("Error: Invalid flag. Use -h for help.")
 		return
 	}
 
-	// Parse command line arguments
+	// command line arguments
 	inputFile := os.Args[1]         // input.txt
-	outputFile := os.Args[2]        //output.txt
-	airportLookupFile := os.Args[3] //airport csv
+	outputFile := os.Args[2]        // output.txt
+	airportLookupFile := os.Args[3] // airport-lookup.csv
 
-	// Parse optional flags, bonus features
-	if len(os.Args) > 4 {
-		parseFlags(os.Args[4:])
-	}
-
-	// Load data, call loadAirportLookup()
+	// load data from csv file, call loadAirportLookup()
 	airportLookup, err := loadAirportLookup(airportLookupFile)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	// Call prettifyItinerary() with command line arguments
+	// call prettifyItinerary() with command line arguments
 	err = prettifyItinerary(inputFile, outputFile, airportLookup)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
-		fmt.Println("Output generated successfully!")
+		fmt.Println("Output generated successfully!") // everything ok!
 	}
 } // main() END
 /////////////////////////////////////////////////////////////////////////////////////////
 
-func displayUsage() { // instructions for using the program
+// instructions for using the program
+func displayUsage() {
 	fmt.Println("Itinerary usage:")
-	fmt.Println("go run . ./input.txt ./output.txt ./airports_lookup.csv [flags]")
-	fmt.Println("Flags:")
-	fmt.Println("-color: Enable color in output")
-	fmt.Println("-reverse: Enable reverse order of columns in CSV lookup")
-	fmt.Println("-airport: Enable conversion of airport names to IATA/ICAO codes")
+	fmt.Println("go run . <flag: -h> ./input.txt ./output.txt ./airport-lookup.csv")
 } // displayUsage() END
 /////////////////////////////////////////////////////////////////////////////////////////
 
-func parseFlags(flags []string) {
-	for _, flag := range flags {
-		switch flag {
-		case "-color":
-			colorOutput = true // bonus feature: colors
-		case "-reverse":
-			reverseColumns = true // bonus feature: different order
-		case "-airport":
-			airportNames = true //bonus feature: reversed
-		default:
-			fmt.Println("Unknown flag:", flag)
-		}
-	}
-} //parseFlags() /
-/////////////////////////////////////////////////////////////////////////////////////////
-
+// loads airport data from csv file into airportLookup map
 func loadAirportLookup(filename string) (AirportLookup, error) {
 	airportLookup := make(AirportLookup)
 
-	// open file, input.txt
+	// open csv file
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, errors.New("Airport lookup not found")
+		return nil, errors.New("airport lookup not found")
 	}
-	defer file.Close() // closing the file!
+	defer file.Close() // close csv!
 
-	// read file
+	// create csv reader object
 	reader := csv.NewReader(file)
-	_, err = reader.Read() // Skip header row
-	if err != nil {
-		return nil, errors.New("Airport lookup malformed: missing header row")
-	}
 
-	// Parse the CSV data and populate the airport lookup map.
-	// (if different order in columns, still works, column name as key)
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+	// read header row created by reader, returns slice of strings
+	header, err := reader.Read()
+	if err != nil {
+		// Return an error if the error is not EOF (end of line)
+		if err != io.EOF {
 			return nil, err
 		}
-		airportLookup[record[4]] = record[0] // iata column
-		airportLookup[record[3]] = record[0] // icao column
 	}
 
+	expectedHeader := []string{"name", "iso_country", "municipality", "icao_code", "iata_code", "coordinates"}
+
+	if len(header) != len(expectedHeader) { // if not enough columns
+		return nil, errors.New("airport lookup malformed: incorrect number of columns")
+	}
+
+	for i, col := range header { // iterate over header
+		if col != expectedHeader[i] { // if header order do not match expected order
+			return nil, errors.New("airport lookup malformed: incorrect header")
+		}
+	}
+
+	for {
+		record, err := reader.Read() // read every part of csv, return record
+		if err == io.EOF {           // end of line error
+			break
+		}
+		if err != nil { // other error
+			return nil, err
+		}
+		// check every column, is empty cells or no data
+		for _, col := range record {
+			if col == "" || len(strings.TrimSpace(col)) == 0 || len(col) == 0 {
+				return nil, errors.New("airport lookup malformed: missing or blank data")
+			}
+		}
+		airportLookup[record[3]] = record[0] // ICAO code to airport name
+		airportLookup[record[4]] = record[0] // IATA code to airport name
+	}
 	return airportLookup, nil
 } //loadAirportLookup() END
 /////////////////////////////////////////////////////////////////////////////////////////
 
-// function to format strings, string manipulating
+// formats input data, writes prettified ouput file
 func prettifyItinerary(inputFile, outputFile string, airportLookup AirportLookup) error {
-	/* Check if the output file already exists
-	if _, err := os.Stat(outputFile); err == nil {
-		return errors.New("Output file already exists. Please choose a different file name.")
-	}*/
+	/*
+		// Check if output file already exists, won't let create same output file twice
+		if _, err := os.Stat(outputFile); err == nil {
+			return errors.New("output file already exists, please choose a different file name")
+		}*/
 
-	// read file
-	content, err := ioutil.ReadFile(inputFile)
+	// read input file
+	file, err := os.Open(inputFile)
 	if err != nil {
-		return errors.New("Input not found")
+		return errors.New("input not found")
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file) // read input line by line
+	var content []string              // empty slice for modified lines
+
+	// iterate over input file
+	for scanner.Scan() {
+		line = scanner.Text()              // every line in input
+		pattern := `(#|##)([A-Z0-9]{3,4})` // regex pattern for airport codes
+		// # or ##, three to four characters A-Z or 0-9
+		re := regexp.MustCompile(pattern)
+
+		// find airport codes in input file
+		for _, match := range re.FindAllStringSubmatch(line, -1) {
+			// Extract the airport code and its prefix
+			code := match[2]   // airpor code, 3-4 characters
+			prefix := match[1] // # or ##
+
+			if prefix == "#" || prefix == "##" {
+				// if airport code exists in the lookup map
+				if name, ok := airportLookup[code]; ok {
+					// replace airport code with airport name
+					line = strings.ReplaceAll(line, prefix+code, name)
+				}
+			}
+		}
+
+		// calls parseDateTime() with lines from input
+		line = parseDateTime(line)
+
+		// replace whitespace characters with newlines
+		line = strings.ReplaceAll(line, ` (\v)`, "\n")
+		line = strings.ReplaceAll(line, ` (\f)`, "\n")
+		line = strings.ReplaceAll(line, ` (\r)`, "\n")
+
+		// adds modified line to content
+		content = append(content, line)
 	}
 
-	// convert to string
-	contentStr := string(content)
-
-	// replace \v, \f, and \r with \n
-	re := regexp.MustCompile(`\\[vfr]`)
-	contentStr = re.ReplaceAllString(contentStr, "\n")
-
-	// split content by \n
-	lines := strings.Split(contentStr, "\n")
-
-	// parseDateTime() in each line
-	for i, line := range lines {
-		lines[i] = parseDateTime(line)
+	if err := scanner.Err(); err != nil {
+		return err // return error if errors during scanning
 	}
 
-	// join the modified lines back into string
-	contentStr = strings.Join(lines, "\n")
-
-	// replace icao and iata with  airport names
-	for code, name := range airportLookup {
-		contentStr = strings.ReplaceAll(contentStr, "##"+code, "TEMP_PLACEHOLDER"+name)
-		contentStr = strings.ReplaceAll(contentStr, "#"+code, name)
-		contentStr = strings.ReplaceAll(contentStr, "TEMP_PLACEHOLDER"+name, name)
-	}
-
-	// if airport code not found
-	re = regexp.MustCompile(`##?[A-Z]{3}`)
-	missingCodes := re.FindAllString(contentStr, -1)
-	if len(missingCodes) > 0 {
-		//fmt.Println("Missing airport codes:", missingCodes)
-		//return fmt.Errorf("Airport codes not found in the lookup: %v", missingCodes)
-		return fmt.Errorf("Airport lookup malformed")
-	}
-
-	// calls parseDateTime()
-	contentStr = parseDateTime(contentStr)
-
-	// calls trimWhitespace()
+	// every line separeted by newlines
+	contentStr := strings.Join(content, "\n")
+	// calls trimWhiteSpace() with content line
 	contentStr = trimWhiteSpace(contentStr)
 
-	// call bonus features
-	//bonus()
-	//colorOutput
-	//reverseColumns
-	//airportNames
-
-	// Another way to write into file
-	/*
-		file, err := os.OpenFile(outputFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		_, err = file.Write([]byte(contentStr))
-		if err != nil {
-			return err
-		}*/
-	file, err := os.Create(outputFile) // creates output txt file
+	// create output file if not exist, clear it if exist
+	outputFileHandle, err := os.Create(outputFile)
 	if err != nil {
 		return err
 	}
-	defer file.Close() // closing file!
+	defer outputFileHandle.Close() // closing file!
 
-	_, err = file.WriteString(contentStr) // write content into output file
+	_, err = outputFileHandle.WriteString(contentStr) // write content to output.txt
 	if err != nil {
 		return err
 	}
@@ -211,78 +201,83 @@ func prettifyItinerary(inputFile, outputFile string, airportLookup AirportLookup
 } // prettifyItinerary() END
 /////////////////////////////////////////////////////////////////////////////////////////
 
-func parseDateTime(text string) string {
-	// regular expression pattern to match ISO 8601 date-time formats
-	re := regexp.MustCompile(`(\w)\(([^)]+)\)`)
-	return re.ReplaceAllStringFunc(text, func(match string) string {
-		parts := re.FindStringSubmatch(match)
-		mode := parts[1]        // start of the date string: D, or T12 or T24
-		datetimeStr := parts[2] // the rest: time
+// parses and formats date and time
+func parseDateTime(input string) string {
+	// regex patterns for D, T12 and T24 ISO times
+	// D(YYYY-MM-DDTHH:MMZ)
+	datePattern := `D\((\d{4}-\d{2}-\d{2})T.*\)`
+	// T12(YYYY-MM-DDTHH:MM, +/-, HH:MM or Z)
+	time12Pattern := `T12\(\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}).*?([-+]\d{2}:\d{2}|Z)\)`
+	// T24(YYYY-MM_DDTHH:MM, +/-, HH:MM or Z)
+	time24Pattern := `T24\(\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}).*?([-+]\d{2}:\d{2}|Z)\)`
 
-		// Parse the datetime string ????????????????????????
-		datetime, err := time.Parse(time.RFC3339, datetimeStr)
+	// patterns to variables
+	dateRegex := regexp.MustCompile(datePattern)
+	time12Regex := regexp.MustCompile(time12Pattern)
+	time24Regex := regexp.MustCompile(time24Pattern)
+
+	// find D time in input
+	input = dateRegex.ReplaceAllStringFunc(input, func(match string) string {
+		ddate := dateRegex.FindStringSubmatch(match)[1]
+		date, err := time.Parse("2006-01-02", ddate) // input string to right format
 		if err != nil {
-			// Unable to parse, return unchanged
-			return match
+			return match // leave unchanged if malformed
 		}
-
-		var formattedDateTime string
-		switch mode { //???????????????????????
-		case "D":
-			// Format date as DD-Mmm-YYYY
-			formattedDateTime = datetime.Format("02 Jan 2006")
-		case "T12":
-			// Format time in 12-hour format
-			formattedDateTime = datetime.Format("03:04PM (-07:00)")
-		case "T24":
-			// Format time in 24-hour format
-			formattedDateTime = datetime.Format("15:04 (-07:00)")
-		}
-
-		return formattedDateTime
+		return date.Format("02 Jan 2006")
 	})
-}
 
-// parseDateTime() END
-/////////////////////////////////////////////////////////////////////////////////////////
+	// find T12 time in input
+	input = time12Regex.ReplaceAllStringFunc(input, func(match string) string {
+		t12time := time12Regex.FindStringSubmatch(match)
+		timeString := t12time[1]   // first part of string: time
+		offsetString := t12time[2] // second part of string: offset
+		if offsetString == "Z" {   // if Z in T12 time
+			offsetString = "+00:00" // change offset to Zulu time
+		}
+		time, err := time.Parse("15:04", timeString) // input string to right format
+		if err != nil {
+			return match // leave unchanged if malformed
+		} // print time and offset
+		return fmt.Sprintf("%s (%s)", time.Format("03:04PM"), offsetString)
+	})
 
+	// find T24 time in input
+	input = time24Regex.ReplaceAllStringFunc(input, func(match string) string {
+		t24time := time24Regex.FindStringSubmatch(match)
+		timeString := t24time[1]   // first part of string: time
+		offsetString := t24time[2] // second part of string: offset
+		if offsetString == "Z" {   // if Z in T24 time
+			offsetString = "+00:00" // change offset to Zulu time
+		}
+		time, err := time.Parse("15:04", timeString) // input string to right format
+		if err != nil {
+			return match // leave unchanged if malformed
+		} // print time and offset
+		return fmt.Sprintf("%s (%s)", time.Format("15:04"), offsetString)
+	})
+
+	return input // return modified input
+} // parseDateTime() END
+// ///////////////////////////////////////////////////////////////////////////////////////
+
+// removes empty space from input, max two newlines in a row
 func trimWhiteSpace(text string) string {
-	lines := strings.Split(text, "\n")
-	var result []string
-	prevEmpty := false // Flag to track if the previous line was empty
+	lines := strings.Split(text, "\n") // split input into lines
+	var result []string                // store non empty lines
+	prevEmpty := false                 // if previous line was empty
 	for _, line := range lines {
-		// Trim leading and trailing spaces from the line
-		trimmedLine := strings.TrimSpace(line)
-		// Check if the current line is empty
-		empty := trimmedLine == ""
-		// Check if the previous line was empty and the current line is also empty
-		if prevEmpty && empty {
-			// Skip adding the current line if the previous line was empty
+		trimmedLine := strings.TrimSpace(line) // remove empty space from start/end
+		empty := trimmedLine == ""             // if current line is empty
+		if prevEmpty && empty {                // if both previous and current lines are empty
+			continue // skip adding current line
+		}
+		if empty && prevEmpty { // keep track of empty lines
+			// If more than two consecutive empty lines, skip adding this line
 			continue
 		}
-		// Keep track of the number of consecutive empty lines
-		if empty && prevEmpty {
-			// If there are more than two consecutive empty lines, skip adding this line
-			continue
-		}
-		result = append(result, trimmedLine)
-		prevEmpty = empty
+		result = append(result, trimmedLine) // trimmed line to result slice
+		prevEmpty = empty                    // update prevEmpty
 	}
-	return strings.Join(result, "\n")
-}
-
-//trimWhiteSpace() END
-/////////////////////////////////////////////////////////////////////////////////////////
-
-//////////////////
-// Bonus functions
-//////////////////
-
-func bonus() {
-	//colorOutput
-	//reverseColumns
-	//airportNames
-
-	return
-} //bonus() END
+	return strings.Join(result, "\n") // join non empty lines into string, separated by newlines
+} //trimWhiteSpace() END
 /////////////////////////////////////////////////////////////////////////////////////////
