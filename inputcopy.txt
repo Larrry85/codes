@@ -39,8 +39,7 @@ T24(2022-07-17T04:60+13:00)
 
 6. It shall create output file if it does not exist.
 
-Other Tests: 
-
+***************************************************************************
 1. It shall print usage if wrong number of parameters are provided or with -h flag.
 2. It shall print "Airport Lookup not found" if provided 3rd file does not exist.
 3. It shall print "Input not found" if provided 1st file does not exist.
