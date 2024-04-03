@@ -8,7 +8,7 @@ import (
 	"io"           // csv
 	"os"           // interface, arguments, file operations
 	"regexp"       // regex patterns
-	"strings"      // string manipulation, contentStr := strings.Join(content, "\n")
+	"strings"      // string manipulation: contentStr := strings.Join(content, "\n")
 	"time"         // measuring and displaying time
 )
 
@@ -33,10 +33,9 @@ func main() {
 		return // exits the program
 	}
 
-	// if ony "go run . -h"
+	// if only "go run . -h"
 	if len(os.Args) > 1 && os.Args[1] == "-h" {
 		displayUsage()
-		//fmt.Println("Error: Invalid flag. Use -h for help.")
 		return
 	}
 
@@ -86,12 +85,12 @@ func loadAirportLookup(filename string) (AirportLookup, error) {
 	// read header row created by reader, returns slice of strings
 	header, err := reader.Read()
 	if err != nil {
-		// Return an error if the error is not EOF (end of line)
+		// Return an error if the error is not EOF (end of file)
 		if err != io.EOF {
 			return nil, err
 		}
 	}
-
+	// standard header
 	expectedHeader := []string{"name", "iso_country", "municipality", "icao_code", "iata_code", "coordinates"}
 
 	if len(header) != len(expectedHeader) { // if not enough columns
@@ -106,7 +105,7 @@ func loadAirportLookup(filename string) (AirportLookup, error) {
 
 	for {
 		record, err := reader.Read() // read every part of csv, return record
-		if err == io.EOF {           // end of line error
+		if err == io.EOF {           // end of file error
 			break
 		}
 		if err != nil { // other error
@@ -125,13 +124,13 @@ func loadAirportLookup(filename string) (AirportLookup, error) {
 } //loadAirportLookup() END
 /////////////////////////////////////////////////////////////////////////////////////////
 
-// formats input data, writes prettified ouput file
+// formats input data, writes prettified output file
 func prettifyItinerary(inputFile, outputFile string, airportLookup AirportLookup) error {
-	/*
-		// Check if output file already exists, won't let create same output file twice
-		if _, err := os.Stat(outputFile); err == nil {
-			return errors.New("output file already exists, please choose a different file name")
-		}*/
+	/* <- You can remove this
+	// Check if output file already exists, won't let create same output file twice
+	if _, err := os.Stat(outputFile); err == nil {
+		return errors.New("output file already exists, please choose a different file name")
+	} You can remove this -> */
 
 	// read input file
 	file, err := os.Open(inputFile)
@@ -153,7 +152,7 @@ func prettifyItinerary(inputFile, outputFile string, airportLookup AirportLookup
 		// find airport codes in input file
 		for _, match := range re.FindAllStringSubmatch(line, -1) {
 			// Extract the airport code and its prefix
-			code := match[2]   // airpor code, 3-4 characters
+			code := match[2]   // airpor code
 			prefix := match[1] // # or ##
 
 			if prefix == "#" || prefix == "##" {
@@ -181,7 +180,7 @@ func prettifyItinerary(inputFile, outputFile string, airportLookup AirportLookup
 		return err // return error if errors during scanning
 	}
 
-	// every line separeted by newlines
+	// joins lines separated by newlines
 	contentStr := strings.Join(content, "\n")
 	// calls trimWhiteSpace() with content line
 	contentStr = trimWhiteSpace(contentStr)
@@ -204,12 +203,12 @@ func prettifyItinerary(inputFile, outputFile string, airportLookup AirportLookup
 // parses and formats date and time
 func parseDateTime(input string) string {
 	// regex patterns for D, T12 and T24 ISO times
-	// D(YYYY-MM-DDTHH:MMZ)
+	// D(YYYY-MM-DD T any)
 	datePattern := `D\((\d{4}-\d{2}-\d{2})T.*\)`
-	// T12(YYYY-MM-DDTHH:MM, +/-, HH:MM or Z)
-	time12Pattern := `T12\(\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}).*?([-+]\d{2}:\d{2}|Z)\)`
-	// T24(YYYY-MM_DDTHH:MM, +/-, HH:MM or Z)
-	time24Pattern := `T24\(\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}).*?([-+]\d{2}:\d{2}|Z)\)`
+	// T12(YYYY-MM-DD T HH:MM, (+/-, HH:MM or Z))
+	time12Pattern := `T12\(\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})([-+]\d{2}:\d{2}|Z)\)`
+	// T24(YYYY-MM_DD T HH:MM, (+/-, HH:MM or Z))
+	time24Pattern := `T24\(\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})([-+]\d{2}:\d{2}|Z)\)`
 
 	// patterns to variables
 	dateRegex := regexp.MustCompile(datePattern)
@@ -218,42 +217,50 @@ func parseDateTime(input string) string {
 
 	// find D time in input
 	input = dateRegex.ReplaceAllStringFunc(input, func(match string) string {
-		ddate := dateRegex.FindStringSubmatch(match)[1]
-		date, err := time.Parse("2006-01-02", ddate) // input string to right format
+		dTime := dateRegex.FindStringSubmatch(match)
+		dateString := dTime[1]                            // first captured group: date
+		date, err := time.Parse("2006-01-02", dateString) // input string to right format
 		if err != nil {
 			return match // leave unchanged if malformed
 		}
+		// date as a string
 		return date.Format("02 Jan 2006")
 	})
 
 	// find T12 time in input
 	input = time12Regex.ReplaceAllStringFunc(input, func(match string) string {
 		t12time := time12Regex.FindStringSubmatch(match)
-		timeString := t12time[1]   // first part of string: time
-		offsetString := t12time[2] // second part of string: offset
+		timeString := t12time[1]   // first captured group: time
+		offsetString := t12time[2] // second captured group: offset
 		if offsetString == "Z" {   // if Z in T12 time
 			offsetString = "+00:00" // change offset to Zulu time
 		}
 		time, err := time.Parse("15:04", timeString) // input string to right format
 		if err != nil {
 			return match // leave unchanged if malformed
-		} // print time and offset
-		return fmt.Sprintf("%s (%s)", time.Format("03:04PM"), offsetString)
+		}
+		// format with AM/PM
+		timeStringFormatted := time.Format("03:04PM")
+		// time and offset as a string
+		return fmt.Sprintf("%s (%s)", timeStringFormatted, offsetString)
 	})
 
 	// find T24 time in input
 	input = time24Regex.ReplaceAllStringFunc(input, func(match string) string {
 		t24time := time24Regex.FindStringSubmatch(match)
-		timeString := t24time[1]   // first part of string: time
-		offsetString := t24time[2] // second part of string: offset
+		timeString := t24time[1]   // first captured group: time
+		offsetString := t24time[2] // second captured group: offset
 		if offsetString == "Z" {   // if Z in T24 time
 			offsetString = "+00:00" // change offset to Zulu time
 		}
 		time, err := time.Parse("15:04", timeString) // input string to right format
 		if err != nil {
 			return match // leave unchanged if malformed
-		} // print time and offset
-		return fmt.Sprintf("%s (%s)", time.Format("15:04"), offsetString)
+		}
+		// format with AM/PM
+		timeStringFormatted := time.Format("15:04")
+		// time and offset as a string
+		return fmt.Sprintf("%s (%s)", timeStringFormatted, offsetString)
 	})
 
 	return input // return modified input
@@ -262,16 +269,13 @@ func parseDateTime(input string) string {
 
 // removes empty space from input, max two newlines in a row
 func trimWhiteSpace(text string) string {
-	lines := strings.Split(text, "\n") // split input into lines
+	lines := strings.Split(text, "\n") // split input into lines separated ny newline
 	var result []string                // store non empty lines
 	prevEmpty := false                 // if previous line was empty
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line) // remove empty space from start/end
 		empty := trimmedLine == ""             // if current line is empty
-		if prevEmpty && empty {                // if both previous and current lines are empty
-			continue // skip adding current line
-		}
-		if empty && prevEmpty { // keep track of empty lines
+		if empty && prevEmpty {                // if both previous and current lines are empty
 			// If more than two consecutive empty lines, skip adding this line
 			continue
 		}
