@@ -12,7 +12,7 @@ This tool converts airplane booking data into more user friendly form.
 5. Program creates output file if it doesn't exist, and overwrites it every time program is run.
 6. (Option in lines 129 - 133: program does not accept output file that already exist.)
 7. Program converts IATA and ICAO codes into airport names.
-8.  Program converts ISO times into user friendly form.
+8.  Program converts ISO times into user friendly form...
 9.  Program formats output.txt in a way there are no whitespaces or too many newlines.
 10. Bonus feature: program handles non standard column order.
 
