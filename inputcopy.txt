@@ -1,4 +1,4 @@
-Main tests:
+Tests:
 
 1. It converts IATA and ICAO codes to airport names:
 Your flight departs from #VKO and your destination is ##EGLL.
@@ -61,8 +61,4 @@ Other Tests:
 
 4. It shall print "Airport lookup malformed" if columns are missing or its values are empty.
 5. It shall terminate the program if error occurs and shall not rewrite output file in that case.
-
-BONUS:
-
-It works with non-standard airport lookup column order.
 ***************************************************************************
