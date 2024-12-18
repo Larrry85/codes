@@ -17,11 +17,17 @@ This tool converts airplane booking data into more user friendly form.
 
 ## Usage
 
+Print usage with flag: -h
 ```
-Itinerary usage:
-go run . <flag: -h> ./input.txt ./output.txt ./airport-lookup.csv
+go run . -h ./input.txt ./output.txt ./airport-lookup.csv
 
 ```
+How to use:
+```
+go run . ./input.txt ./output.txt ./airport-lookup.csv
+
+```
+
 
 ## Coder
 
