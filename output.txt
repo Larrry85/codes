@@ -1,0 +1,48 @@
+Tests:
+
+1. It converts IATA and ICAO codes to airport names:
+Your flight departs from Vnukovo International Airport and your destination is London Heathrow Airport.
+Your flight departs from Vnukovo International Airport, and your destination is London Heathrow Airport.
+Your flight departs from Vnukovo International Airport
+and your destination is London Heathrow Airport.
+
+2. It does not convert non existing and converts non standart airport codes:
+Your flight depart from  Rewa Airport, Chorhata, REWA and your destination is ##SOME.
+Your flight depart from  Rewa Airport, Chorhata, REWA, and your destination is ##SOME.
+Your flight depart from  Rewa Airport, Chorhata, REWA
+and your destination is ##SOME.
+
+3. It works with D, T12 and T24 formats:
+28 Feb 2022
+
+07:18PM (-02:00)
+02:54PM (+00:00)
+03:30AM (+11:00)
+03:09AM (+00:00)
+
+04:08 (+13:00)
+17:59 (+00:00)
+15:29 (-11:00)
+21:43 (+00:00)
+
+4. It does not convert not valid dates and times:
+D(2022-02-30T08:07Z)
+T12(2024-13-24T25:18-02:00)
+T24(2022-07-17T04:60+13:00)
+
+5. It shall replace
+,
+and
+
+with new line (\n) and does not print more that 2 consecutive "\n" characters.
+
+6. It shall create output file if it does not exist.
+
+***************************************************************************
+- It shall print usage if wrong number of parameters are provided or with -h flag.
+- It shall print "Airport Lookup not found" if provided 3rd file does not exist.
+- It shall print "Input not found" if provided 1st file does not exist.
+
+- It shall print "Airport lookup malformed" if columns are missing or its values are empty.
+- It shall terminate the program if error occurs and shall not rewrite output file in that case.
+***************************************************************************
