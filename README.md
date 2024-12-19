@@ -27,6 +27,8 @@ How to use:
 go run . ./input.txt ./output.txt ./airport-lookup.csv
 
 ```
+## Picture of input and output
+
 ![Screenshot](codes.png)
 
 ## Coder
