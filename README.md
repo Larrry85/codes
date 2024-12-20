@@ -33,4 +33,5 @@ go run . ./input.txt ./output.txt ./airport-lookup.csv
 
 ## Coder
 
-Laura Levistö 4/24
+Laura Levistö       
+4/24
